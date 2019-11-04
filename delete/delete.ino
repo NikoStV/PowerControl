@@ -11,13 +11,15 @@ class Indicator{
   };
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE); // Работает лучше
 
+
+
 class EventEnc{
   public: 
       int numRevol = 0;
       byte numClick = 0;
       byte numShortClick = 1;
-      byte numLongClick = 0;
       bool shortPress = false;
+      bool longClick = false;
       bool longPress = false;
       bool turnLeft = false;
       bool turnRight = false;
@@ -28,6 +30,9 @@ class EventEnc{
     turnLeft = false;
     turnRight = false;
     }
+  public: void clickLong(){
+    longClick = !longClick;
+  }  
   };
 class Encoder123{
     long timeEnd, timeStart, timeButStart, timeButEnd = 0;
@@ -51,6 +56,7 @@ class Encoder123{
         if ((!encoderA && !encoderB) && (event.turnLeft || event.turnRight)) {
           event.ResetValues();
         }
+        
         if (button ) {
           timeButStart = millis();
           if (!event.shortPress) {
@@ -60,7 +66,7 @@ class Encoder123{
           if (timeButStart - timeButEnd >= 500 && !event.longPress ) {
             timeButEnd = timeButStart;
             event.longPress = true;
-            event.numLongClick++;
+            event.clickLong();
             return event.longPress;
           }
         }
@@ -98,10 +104,10 @@ void onDisplay(double volt, double amper, double timer, int h, int m, int s){
 void pointer(byte &pos){
   if(pos > 2){
     pos = 0;
-    } 
-  u8g2.setFont(u8g2_font_ncenB12_tr);
-  u8g2.setCursor(0,16*(pos+1));
-  u8g2.print(">");
+    }
+    u8g2.setFont(u8g2_font_ncenB12_tr);
+    u8g2.setCursor(0,16*(pos+1));
+    u8g2.print(">");
   }
 void firstScreen(){
     u8g2.setFont(u8g2_font_ncenB12_tr);
@@ -117,7 +123,6 @@ void setup() {
   pinMode(2, INPUT_PULLUP); // определяем вывод как вход
   pinMode(4, INPUT_PULLUP); // определяем вывод как вход
   u8g2.begin();
-  
   Serial.begin(57600);
   if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
@@ -143,12 +148,17 @@ void loop() {
   if(EndTime - StartTime >= 150){
     StartTime = EndTime;
     u8g2.clearBuffer();
-    pointer(eve.numShortClick);
     firstScreen();
     int h = now.hour();
     int m = now.minute();
     int s = now.second();
-    onDisplay(disp.value[0], disp.value[1], disp.value[2], h,m,s);
+    if(eve.longClick){
+      pointer(eve.numShortClick);
+      onDisplay(disp.value[0], disp.value[1], disp.value[2], h,m,s);
+      }else{
+        onDisplay(111, 222, 333, h,m,s);
+        }
+    
     u8g2.sendBuffer(); 
     }
 }
